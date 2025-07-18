@@ -1,18 +1,45 @@
-import { FileText, Bell, User } from "lucide-react";
+import { FileText, Bell, User, CreditCard } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export function Header() {
+  const [location] = useLocation();
+
+  const navItems = [
+    { path: "/", label: "Invoices", icon: FileText },
+    { path: "/transactions", label: "Transactions", icon: CreditCard }
+  ];
+
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <FileText className="text-white text-lg" />
+        <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <FileText className="text-white text-lg" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">InvoicePro</h1>
+              <p className="text-sm text-slate-500">Professional Invoice Management</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">InvoicePro</h1>
-            <p className="text-sm text-slate-500">Professional Invoice Management</p>
-          </div>
+          
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-1">
+            {navItems.map(({ path, label, icon: Icon }) => (
+              <Link key={path} to={path}>
+                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  location === path 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}>
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              </Link>
+            ))}
+          </nav>
         </div>
+        
         <div className="flex items-center space-x-4">
           <button className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors">
             <Bell className="h-5 w-5" />

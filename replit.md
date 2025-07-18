@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack invoice management application built with React, Express.js, and PostgreSQL. The application allows users to create, manage, and track invoices with support for multiple invoice types (proforma, standard, commercial, etc.). It features a modern UI built with shadcn/ui components and uses Drizzle ORM for database operations.
+This is a comprehensive full-stack invoice management application built with React, Express.js, and PostgreSQL. The application allows users to create, manage, and track invoices with support for 10 different invoice types (proforma, standard, commercial, etc.). It features a modern UI built with shadcn/ui components, professional letterhead design capabilities, and a standalone transaction simulation system for testing various payment scenarios. The app uses Drizzle ORM for database operations and includes advanced styling features like logos, stamps, and animations.
 
 ## User Preferences
 
@@ -40,6 +40,13 @@ Preferred communication style: Simple, everyday language.
 - **Line Items Table**: Individual items/services within invoices
 - **Type-specific Data**: JSON field for storing invoice type-specific information
 
+### Transaction System (client/src/lib/transaction-types.ts)
+- **Payment Methods**: Support for 10+ payment types (bank transfer, credit/debit cards, Bitcoin, Ethereum, PayPal, Stripe, etc.)
+- **Transaction Statuses**: 9 different status types (pending, processing, completed, failed, declined, on hold, cancelled, refunded, partial refund)
+- **Mock Transaction Generator**: Creates realistic transaction data with processing fees, reference IDs, and gateway responses
+- **Failure Scenarios**: Common failure reasons and suggested solutions for testing error handling
+- **Status Visualization**: Color-coded badges and icons for different transaction states
+
 ### API Endpoints (server/routes.ts)
 - **GET /api/clients**: Retrieve all clients
 - **POST /api/clients**: Create new client
@@ -65,6 +72,9 @@ Preferred communication style: Simple, everyday language.
 - **LineItemForm**: Dynamic form for adding/removing line items
 - **InvoicePreview**: Real-time preview of invoice calculations
 - **RecentInvoices**: Dashboard widget showing recent invoices with status badges
+- **TransactionManager**: Standalone transaction simulator for testing payment scenarios
+- **LetterheadDesigner**: Professional letterhead creation with logo/stamp upload capabilities
+- **Header**: Navigation component with routing between Invoice Editor and Transaction Center
 
 ## Data Flow
 
