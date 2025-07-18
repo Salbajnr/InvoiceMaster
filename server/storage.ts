@@ -2,16 +2,26 @@ import {
   clients, 
   invoices, 
   lineItems,
+  users,
   type Client, 
   type InsertClient,
   type Invoice,
   type InsertInvoice,
   type LineItem,
   type InsertLineItem,
-  type InvoiceWithDetails
+  type InvoiceWithDetails,
+  type User,
+  type UpsertUser
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+
   // Clients
   getClient(id: number): Promise<Client | undefined>;
   getClients(): Promise<Client[]>;
@@ -34,14 +44,182 @@ export interface IStorage {
   deleteLineItemsByInvoice(invoiceId: number): Promise<boolean>;
 }
 
+export class DatabaseStorage implements IStorage {
+  // User operations
+  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Clients and other methods will remain as database operations
+  async getClient(id: number): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client;
+  }
+
+  async getClients(): Promise<Client[]> {
+    return await db.select().from(clients);
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const [client] = await db.insert(clients).values(insertClient).returning();
+    return client;
+  }
+
+  async updateClient(id: number, clientData: Partial<InsertClient>): Promise<Client | undefined> {
+    const [client] = await db
+      .update(clients)
+      .set(clientData)
+      .where(eq(clients.id, id))
+      .returning();
+    return client;
+  }
+
+  async getInvoice(id: number): Promise<InvoiceWithDetails | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    if (!invoice) return undefined;
+
+    const client = invoice.clientId ? 
+      await this.getClient(invoice.clientId) : undefined;
+    const lineItemsList = await this.getLineItems(id);
+
+    return {
+      ...invoice,
+      client,
+      lineItems: lineItemsList
+    };
+  }
+
+  async getInvoices(): Promise<InvoiceWithDetails[]> {
+    const allInvoices = await db.select().from(invoices);
+    const result: InvoiceWithDetails[] = [];
+
+    for (const invoice of allInvoices) {
+      const client = invoice.clientId ? 
+        await this.getClient(invoice.clientId) : undefined;
+      const lineItemsList = await this.getLineItems(invoice.id);
+
+      result.push({
+        ...invoice,
+        client,
+        lineItems: lineItemsList
+      });
+    }
+
+    return result;
+  }
+
+  async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
+    const invoiceNumber = await this.generateInvoiceNumber();
+    const [invoice] = await db
+      .insert(invoices)
+      .values({
+        ...invoiceData,
+        invoiceNumber,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .returning();
+    return invoice;
+  }
+
+  async updateInvoice(id: number, invoiceData: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const [invoice] = await db
+      .update(invoices)
+      .set({
+        ...invoiceData,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+    return invoice;
+  }
+
+  async deleteInvoice(id: number): Promise<boolean> {
+    await this.deleteLineItemsByInvoice(id);
+    const result = await db.delete(invoices).where(eq(invoices.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async generateInvoiceNumber(): Promise<string> {
+    const allInvoices = await db.select().from(invoices);
+    const nextNumber = allInvoices.length + 1;
+    return `INV-${nextNumber.toString().padStart(4, '0')}`;
+  }
+
+  async getLineItems(invoiceId: number): Promise<LineItem[]> {
+    return await db.select().from(lineItems).where(eq(lineItems.invoiceId, invoiceId));
+  }
+
+  async createLineItem(lineItemData: InsertLineItem): Promise<LineItem> {
+    const [lineItem] = await db.insert(lineItems).values(lineItemData).returning();
+    return lineItem;
+  }
+
+  async updateLineItem(id: number, lineItemData: Partial<InsertLineItem>): Promise<LineItem | undefined> {
+    const [lineItem] = await db
+      .update(lineItems)
+      .set(lineItemData)
+      .where(eq(lineItems.id, id))
+      .returning();
+    return lineItem;
+  }
+
+  async deleteLineItem(id: number): Promise<boolean> {
+    const result = await db.delete(lineItems).where(eq(lineItems.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async deleteLineItemsByInvoice(invoiceId: number): Promise<boolean> {
+    const result = await db.delete(lineItems).where(eq(lineItems.invoiceId, invoiceId));
+    return (result.rowCount || 0) > 0;
+  }
+}
+
 export class MemStorage implements IStorage {
   private clients: Map<number, Client> = new Map();
   private invoices: Map<number, Invoice> = new Map();
   private lineItems: Map<number, LineItem> = new Map();
+  private users: Map<string, User> = new Map();
   private currentClientId = 1;
   private currentInvoiceId = 1;
   private currentLineItemId = 1;
   private currentInvoiceNumber = 1;
+
+  // User operations for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const user: User = {
+      id: userData.id!,
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      createdAt: userData.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(user.id, user);
+    return user;
+  }
 
   // Clients
   async getClient(id: number): Promise<Client | undefined> {
@@ -208,4 +386,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

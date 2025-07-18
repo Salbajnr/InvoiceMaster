@@ -1,12 +1,27 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertClientSchema, insertInvoiceSchema, insertLineItemSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
   // Clients
-  app.get("/api/clients", async (req, res) => {
+  app.get("/api/clients", isAuthenticated, async (req, res) => {
     try {
       const clients = await storage.getClients();
       res.json(clients);
@@ -15,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", isAuthenticated, async (req, res) => {
     try {
       const clientData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(clientData);
@@ -30,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Invoices
-  app.get("/api/invoices", async (req, res) => {
+  app.get("/api/invoices", isAuthenticated, async (req, res) => {
     try {
       const invoices = await storage.getInvoices();
       res.json(invoices);
@@ -39,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/invoices/:id", async (req, res) => {
+  app.get("/api/invoices/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const invoice = await storage.getInvoice(id);
@@ -53,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/invoices", async (req, res) => {
+  app.post("/api/invoices", isAuthenticated, async (req, res) => {
     try {
       const invoiceData = insertInvoiceSchema.parse(req.body);
       
@@ -73,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/invoices/:id", async (req, res) => {
+  app.put("/api/invoices/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const invoiceData = insertInvoiceSchema.partial().parse(req.body);
@@ -92,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/invoices/:id", async (req, res) => {
+  app.delete("/api/invoices/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteInvoice(id);
