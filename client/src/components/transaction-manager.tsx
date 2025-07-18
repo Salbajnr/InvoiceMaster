@@ -34,6 +34,11 @@ import {
   type TransactionStatus,
   type TransactionDetails
 } from "@/lib/transaction-types";
+import { 
+  PLATFORM_TEMPLATES, 
+  generatePlatformTransaction,
+  getPlatformStatusText
+} from "@/lib/platform-templates";
 
 interface TransactionManagerProps {
   invoiceAmount: number;
@@ -58,18 +63,32 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
   const [transactions, setTransactions] = useState<TransactionDetails[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('credit_card');
   const [selectedStatus, setSelectedStatus] = useState<TransactionStatus>('completed');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [customReason, setCustomReason] = useState('');
   const [customSolution, setCustomSolution] = useState('');
   const [showDetails, setShowDetails] = useState<string | null>(null);
   const { toast } = useToast();
 
   const generateTransaction = () => {
-    const transaction = generateMockTransaction(
-      invoiceAmount,
-      currency,
-      selectedPaymentMethod,
-      selectedStatus
-    );
+    let transaction;
+    
+    if (selectedPlatform && PLATFORM_TEMPLATES[selectedPlatform]) {
+      // Generate platform-specific transaction
+      transaction = generatePlatformTransaction(
+        selectedPlatform,
+        invoiceAmount,
+        currency,
+        selectedStatus
+      );
+    } else {
+      // Generate regular mock transaction
+      transaction = generateMockTransaction(
+        invoiceAmount,
+        currency,
+        selectedPaymentMethod,
+        selectedStatus
+      );
+    }
 
     // Override with custom reason/solution if provided
     if (customReason.trim()) {
@@ -85,9 +104,10 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
       onTransactionUpdate(transaction);
     }
 
+    const platformName = selectedPlatform ? PLATFORM_TEMPLATES[selectedPlatform].name : PAYMENT_METHODS[selectedPaymentMethod];
     toast({
       title: "Transaction Generated",
-      description: `${PAYMENT_METHODS[selectedPaymentMethod]} transaction with ${TRANSACTION_STATUSES[selectedStatus]} status`,
+      description: `${platformName} transaction with ${TRANSACTION_STATUSES[selectedStatus]} status`,
     });
 
     // Clear custom fields
@@ -133,12 +153,37 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
       <CardContent className="space-y-6">
         {/* Transaction Generator */}
         <div className="space-y-4">
+          {/* Platform Template Selection */}
+          <div>
+            <Label htmlFor="platform-template">Platform Template (Optional)</Label>
+            <Select 
+              value={selectedPlatform} 
+              onValueChange={setSelectedPlatform}
+            >
+              <SelectTrigger id="platform-template">
+                <SelectValue placeholder="Select a platform template or use generic" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Generic Transaction</SelectItem>
+                {Object.entries(PLATFORM_TEMPLATES).map(([key, template]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <span>{template.logo}</span>
+                      {template.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="payment-method">Payment Method</Label>
               <Select 
                 value={selectedPaymentMethod} 
                 onValueChange={(value) => setSelectedPaymentMethod(value as PaymentMethod)}
+                disabled={!!selectedPlatform}
               >
                 <SelectTrigger id="payment-method">
                   <SelectValue />
@@ -154,6 +199,11 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
                   ))}
                 </SelectContent>
               </Select>
+              {selectedPlatform && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Payment method automatically set by platform template
+                </p>
+              )}
             </div>
 
             <div>
@@ -243,14 +293,31 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {transactions.map((transaction) => (
-                <div key={transaction.id} className="border border-gray-200 rounded-lg p-4">
+              {transactions.map((transaction) => {
+                const platformData = (transaction as any).platformData;
+                const isPlatformTransaction = !!platformData;
+                
+                return (
+                <div 
+                  key={transaction.id} 
+                  className="border border-gray-200 rounded-lg p-4"
+                  style={isPlatformTransaction ? {
+                    background: `linear-gradient(135deg, ${platformData.colors.background}15, ${platformData.colors.primary}05)`,
+                    borderColor: `${platformData.colors.primary}30`
+                  } : {}}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      {PAYMENT_METHOD_ICONS[transaction.paymentMethod]}
+                      {isPlatformTransaction ? (
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm border">
+                          <span className="text-lg">{platformData.logo}</span>
+                        </div>
+                      ) : (
+                        PAYMENT_METHOD_ICONS[transaction.paymentMethod]
+                      )}
                       <div>
                         <p className="font-medium text-sm">
-                          {PAYMENT_METHODS[transaction.paymentMethod]}
+                          {isPlatformTransaction ? platformData.platform : PAYMENT_METHODS[transaction.paymentMethod]}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(transaction.transactionDate).toLocaleString()}
@@ -263,7 +330,11 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
                         className="mt-1"
                         style={getStatusBadgeProps(transaction.status).style}
                       >
-                        {STATUS_CONFIGS[transaction.status].icon} {TRANSACTION_STATUSES[transaction.status]}
+                        {STATUS_CONFIGS[transaction.status].icon} {
+                          isPlatformTransaction 
+                            ? getPlatformStatusText(transaction.paymentMethod, transaction.status)
+                            : TRANSACTION_STATUSES[transaction.status]
+                        }
                       </Badge>
                     </div>
                   </div>
@@ -302,10 +373,82 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
                       {transaction.gatewayResponse && (
                         <div><strong>Gateway Response:</strong> {transaction.gatewayResponse}</div>
                       )}
+                      
+                      {isPlatformTransaction && (
+                        <>
+                          <div className="border-t pt-2 mt-2">
+                            <div className="font-semibold text-gray-700 mb-1">Platform Details:</div>
+                            {platformData.walletAddress && (
+                              <div><strong>Wallet:</strong> {platformData.walletAddress}</div>
+                            )}
+                            {platformData.network && (
+                              <div><strong>Network:</strong> {platformData.network}</div>
+                            )}
+                            {platformData.blockHeight && (
+                              <div><strong>Block Height:</strong> {platformData.blockHeight.toLocaleString()}</div>
+                            )}
+                            {platformData.confirmations && (
+                              <div><strong>Confirmations:</strong> {platformData.confirmations}</div>
+                            )}
+                            {platformData.gasUsed && (
+                              <div><strong>Gas Used:</strong> {platformData.gasUsed.toLocaleString()}</div>
+                            )}
+                            {platformData.gasPrice && (
+                              <div><strong>Gas Price:</strong> {platformData.gasPrice}</div>
+                            )}
+                            {platformData.exchangeRate && (
+                              <div><strong>Exchange Rate:</strong> {platformData.exchangeRate}</div>
+                            )}
+                            {platformData.routingNumber && (
+                              <div><strong>Routing:</strong> {platformData.routingNumber}</div>
+                            )}
+                            {platformData.accountNumber && (
+                              <div><strong>Account:</strong> {platformData.accountNumber}</div>
+                            )}
+                            {platformData.estimatedArrival && (
+                              <div><strong>Estimated Arrival:</strong> {platformData.estimatedArrival}</div>
+                            )}
+                            {platformData.cardType && (
+                              <div><strong>Card Type:</strong> {platformData.cardType}</div>
+                            )}
+                            {platformData.cardNumber && (
+                              <div><strong>Card Number:</strong> {platformData.cardNumber}</div>
+                            )}
+                            {platformData.merchantCategory && (
+                              <div><strong>Merchant Category:</strong> {platformData.merchantCategory}</div>
+                            )}
+                            {platformData.location && (
+                              <div><strong>Location:</strong> {platformData.location}</div>
+                            )}
+                            {platformData.paypalEmail && (
+                              <div><strong>PayPal Email:</strong> {platformData.paypalEmail}</div>
+                            )}
+                            {platformData.protectionEligible && (
+                              <div><strong>Protection:</strong> Eligible</div>
+                            )}
+                            {platformData.invoiceId && (
+                              <div><strong>Invoice ID:</strong> {platformData.invoiceId}</div>
+                            )}
+                            {platformData.paymentMethod && (
+                              <div><strong>Payment Method:</strong> {platformData.paymentMethod}</div>
+                            )}
+                            {platformData.riskLevel && (
+                              <div><strong>Risk Level:</strong> {platformData.riskLevel}</div>
+                            )}
+                            {platformData.customerEmail && (
+                              <div><strong>Customer Email:</strong> {platformData.customerEmail}</div>
+                            )}
+                            {platformData.receiptUrl && (
+                              <div><strong>Receipt:</strong> <span className="text-blue-600">Available</span></div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
