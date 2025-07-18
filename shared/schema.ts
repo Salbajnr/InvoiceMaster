@@ -27,10 +27,17 @@ export const invoices = pgTable("invoices", {
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
   discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
   total: decimal("total", { precision: 10, scale: 2 }).notNull().default("0"),
+  // Design and branding
+  logoUrl: text("logo_url"),
+  letterheadTemplate: text("letterhead_template").default("modern"),
+  primaryColor: text("primary_color").default("#3b82f6"),
+  secondaryColor: text("secondary_color").default("#1e40af"),
+  stampUrl: text("stamp_url"),
+  backgroundStyle: text("background_style").default("clean"),
   // Type-specific fields stored as JSON
   typeSpecificData: jsonb("type_specific_data"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: text("created_at"),
+  updatedAt: text("updated_at"),
 });
 
 export const lineItems = pgTable("line_items", {

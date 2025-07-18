@@ -54,7 +54,13 @@ export class MemStorage implements IStorage {
 
   async createClient(insertClient: InsertClient): Promise<Client> {
     const id = this.currentClientId++;
-    const client: Client = { ...insertClient, id };
+    const client: Client = { 
+      ...insertClient, 
+      id,
+      address: insertClient.address || null,
+      phone: insertClient.phone || null,
+      taxId: insertClient.taxId || null
+    };
     this.clients.set(id, client);
     return client;
   }
@@ -105,8 +111,26 @@ export class MemStorage implements IStorage {
     const id = this.currentInvoiceId++;
     const now = new Date().toISOString();
     const invoice: Invoice = { 
-      ...insertInvoice, 
+      ...insertInvoice,
       id,
+      status: insertInvoice.status || "draft",
+      currency: insertInvoice.currency || "USD",
+      clientId: insertInvoice.clientId || null,
+      dueDate: insertInvoice.dueDate || null,
+      paymentTerms: insertInvoice.paymentTerms || null,
+      notes: insertInvoice.notes || null,
+      subtotal: insertInvoice.subtotal || "0",
+      taxRate: insertInvoice.taxRate || "0",
+      taxAmount: insertInvoice.taxAmount || "0",
+      discount: insertInvoice.discount || "0",
+      total: insertInvoice.total || "0",
+      logoUrl: insertInvoice.logoUrl || null,
+      letterheadTemplate: insertInvoice.letterheadTemplate || "modern",
+      primaryColor: insertInvoice.primaryColor || "#3b82f6",
+      secondaryColor: insertInvoice.secondaryColor || "#1e40af",
+      stampUrl: insertInvoice.stampUrl || null,
+      backgroundStyle: insertInvoice.backgroundStyle || "clean",
+      typeSpecificData: insertInvoice.typeSpecificData || null,
       createdAt: now,
       updatedAt: now
     };
@@ -150,7 +174,13 @@ export class MemStorage implements IStorage {
 
   async createLineItem(insertLineItem: InsertLineItem): Promise<LineItem> {
     const id = this.currentLineItemId++;
-    const lineItem: LineItem = { ...insertLineItem, id };
+    const lineItem: LineItem = { 
+      ...insertLineItem, 
+      id,
+      date: insertLineItem.date || null,
+      invoiceId: insertLineItem.invoiceId || null,
+      hours: insertLineItem.hours || null
+    };
     this.lineItems.set(id, lineItem);
     return lineItem;
   }

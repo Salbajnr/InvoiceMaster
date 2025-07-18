@@ -12,7 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LineItemForm } from "./line-item-form";
-import { InvoicePreview } from "./invoice-preview";
+import { AnimatedInvoicePreview } from "./animated-invoice-preview";
+import { LogoUpload } from "./logo-upload";
+import { LetterheadDesigner } from "./letterhead-designer";
+import { StampUpload } from "./stamp-upload";
 import { downloadInvoicePDF } from "@/lib/pdf-generator";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -37,6 +40,12 @@ const invoiceFormSchema = insertInvoiceSchema.extend({
   })).min(1, "At least one line item is required"),
   taxRate: z.number().min(0).max(100).default(0),
   discount: z.number().min(0).default(0),
+  logoUrl: z.string().optional(),
+  letterheadTemplate: z.string().default("modern"),
+  primaryColor: z.string().default("#3b82f6"),
+  secondaryColor: z.string().default("#1e40af"),
+  backgroundStyle: z.string().default("clean"),
+  stampUrl: z.string().optional(),
 });
 
 type InvoiceFormData = z.infer<typeof invoiceFormSchema>;
@@ -74,6 +83,12 @@ export function InvoiceForm({ invoice, onSave }: InvoiceFormProps) {
       total: "0",
       lineItems: [],
       typeSpecificData: null,
+      logoUrl: "",
+      letterheadTemplate: "modern",
+      primaryColor: "#3b82f6",
+      secondaryColor: "#1e40af",
+      backgroundStyle: "clean",
+      stampUrl: "",
     },
   });
 
@@ -392,13 +407,44 @@ export function InvoiceForm({ invoice, onSave }: InvoiceFormProps) {
         </Card>
       </div>
 
-      {/* Right Panel - Preview & Summary */}
-      <div className="lg:col-span-1">
-        <InvoicePreview
+      {/* Right Panel - Design & Preview */}
+      <div className="lg:col-span-1 space-y-6">
+        {/* Logo Upload */}
+        <LogoUpload
+          logoUrl={form.watch("logoUrl") || ""}
+          onLogoChange={(url) => form.setValue("logoUrl", url || "")}
+        />
+
+        {/* Letterhead Designer */}
+        <LetterheadDesigner
+          letterheadTemplate={form.watch("letterheadTemplate")}
+          primaryColor={form.watch("primaryColor")}
+          secondaryColor={form.watch("secondaryColor")}
+          backgroundStyle={form.watch("backgroundStyle")}
+          onTemplateChange={(template) => form.setValue("letterheadTemplate", template)}
+          onPrimaryColorChange={(color) => form.setValue("primaryColor", color)}
+          onSecondaryColorChange={(color) => form.setValue("secondaryColor", color)}
+          onBackgroundStyleChange={(style) => form.setValue("backgroundStyle", style)}
+        />
+
+        {/* Stamp Upload */}
+        <StampUpload
+          stampUrl={form.watch("stampUrl") || ""}
+          onStampChange={(url) => form.setValue("stampUrl", url || "")}
+        />
+
+        {/* Animated Preview */}
+        <AnimatedInvoicePreview
           invoice={form.getValues()}
           lineItems={form.watch("lineItems") || []}
           taxRate={form.watch("taxRate") || 0}
           discount={form.watch("discount") || 0}
+          logoUrl={form.watch("logoUrl") || ""}
+          letterheadTemplate={form.watch("letterheadTemplate")}
+          primaryColor={form.watch("primaryColor")}
+          secondaryColor={form.watch("secondaryColor")}
+          backgroundStyle={form.watch("backgroundStyle")}
+          stampUrl={form.watch("stampUrl") || ""}
         />
       </div>
     </div>
