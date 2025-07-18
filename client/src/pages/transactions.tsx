@@ -113,8 +113,8 @@ export default function Transactions() {
 
         <Tabs defaultValue="simulator" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="simulator">Transaction Simulator</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics & History</TabsTrigger>
+            <TabsTrigger value="simulator">🧪 Transaction Simulator</TabsTrigger>
+            <TabsTrigger value="analytics">📊 Analytics & History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="simulator" className="space-y-6">

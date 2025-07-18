@@ -151,30 +151,81 @@ export function TransactionManager({ invoiceAmount, currency, onTransactionUpdat
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Transaction Generator */}
+        {/* Platform Template Menu Bar */}
         <div className="space-y-4">
-          {/* Platform Template Selection */}
           <div>
-            <Label htmlFor="platform-template">Platform Template (Optional)</Label>
-            <Select 
-              value={selectedPlatform} 
-              onValueChange={setSelectedPlatform}
-            >
-              <SelectTrigger id="platform-template">
-                <SelectValue placeholder="Select a platform template or use generic" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Generic Transaction</SelectItem>
-                {Object.entries(PLATFORM_TEMPLATES).map(([key, template]) => (
-                  <SelectItem key={key} value={key}>
-                    <div className="flex items-center gap-2">
-                      <span>{template.logo}</span>
-                      {template.name}
+            <Label className="text-base font-semibold">Choose Platform Template</Label>
+            <p className="text-sm text-gray-600 mb-3">Select a platform to generate realistic transaction data with authentic styling</p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              {/* Generic Option */}
+              <button
+                onClick={() => setSelectedPlatform('')}
+                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
+                  selectedPlatform === '' 
+                    ? 'border-blue-500 bg-blue-50 shadow-md' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="w-8 h-8 mx-auto mb-2 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-lg">⚡</span>
+                  </div>
+                  <p className="text-xs font-medium text-gray-900">Generic</p>
+                  <p className="text-xs text-gray-500">Standard</p>
+                </div>
+              </button>
+
+              {/* Platform Templates */}
+              {Object.entries(PLATFORM_TEMPLATES).map(([key, template]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedPlatform(key)}
+                  className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
+                    selectedPlatform === key 
+                      ? 'border-2 shadow-md' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  style={selectedPlatform === key ? {
+                    borderColor: template.primaryColor,
+                    backgroundColor: `${template.primaryColor}10`
+                  } : {}}
+                >
+                  <div className="text-center">
+                    <div className="w-8 h-8 mx-auto mb-2 bg-white rounded-full flex items-center justify-center shadow-sm border">
+                      <span className="text-lg">{template.logo}</span>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    <p className="text-xs font-medium text-gray-900">{template.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {key === 'binance' || key === 'bybit' ? 'Crypto' : 
+                       key === 'wise' || key === 'revolut' ? 'Banking' : 'Payment'}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {selectedPlatform && PLATFORM_TEMPLATES[selectedPlatform] && (
+              <div className="mt-3 p-3 rounded-lg border" style={{
+                backgroundColor: `${PLATFORM_TEMPLATES[selectedPlatform].primaryColor}08`,
+                borderColor: `${PLATFORM_TEMPLATES[selectedPlatform].primaryColor}30`
+              }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{PLATFORM_TEMPLATES[selectedPlatform].logo}</span>
+                  <span className="font-medium">{PLATFORM_TEMPLATES[selectedPlatform].name}</span>
+                  <span className="text-sm text-gray-500">Selected</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {selectedPlatform === 'binance' ? 'Cryptocurrency exchange with BSC network support and 0.1% fees' :
+                   selectedPlatform === 'bybit' ? 'Crypto trading platform with Ethereum network and 0.06% fees' :
+                   selectedPlatform === 'wise' ? 'International money transfers with real exchange rates and low fees' :
+                   selectedPlatform === 'revolut' ? 'Digital banking with virtual cards and free transfers under $1000' :
+                   selectedPlatform === 'paypal' ? 'Digital payments with buyer protection and 3.4% + $0.30 fees' :
+                   selectedPlatform === 'stripe' ? 'Payment processing with 2.9% + $0.30 fees and developer tools' :
+                   'Generic transaction template'}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

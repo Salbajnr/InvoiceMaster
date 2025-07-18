@@ -47,6 +47,13 @@ Preferred communication style: Simple, everyday language.
 - **Failure Scenarios**: Common failure reasons and suggested solutions for testing error handling
 - **Status Visualization**: Color-coded badges and icons for different transaction states
 
+### Platform Templates (client/src/lib/platform-templates.ts)
+- **Authentic Platform Simulation**: Realistic templates for Binance, Bybit, Wise, Revolut, PayPal, and Stripe
+- **Platform-specific Styling**: Authentic colors, branding, and visual elements for each platform
+- **Realistic Fee Structures**: Accurate fee calculations (Binance 0.1%, Stripe 2.9% + $0.30, Wise $1.50 min, etc.)
+- **Platform-specific Data**: Wallet addresses for crypto, card details for payments, routing info for banks
+- **Interactive Menu Bar**: Visual platform selector with hover effects and branded styling
+
 ### API Endpoints (server/routes.ts)
 - **GET /api/clients**: Retrieve all clients
 - **POST /api/clients**: Create new client
